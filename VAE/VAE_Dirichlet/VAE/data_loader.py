@@ -5,10 +5,6 @@ from sklearn.model_selection import train_test_split
 from torch.utils.data import Dataset, DataLoader
 from torchvision import transforms
 
-'''
-    用于加载和预处理图像数据，包括裁剪 Hounsfield 单位 (HU) 范围，并将数据转化为张量格式。
-'''
-
 class LoadImages(Dataset):
     def __init__(self, main_dir, files_list, HU_Upper, HU_Lower):
         self.main_dir = main_dir
@@ -29,10 +25,6 @@ class LoadImages(Dataset):
         img = self.transform(img)
         return img
 
-'''
-    数据集被分为训练集和测试集，具体方法是根据 meta_mal_nonmal.csv 文件中的 patient_id 字段进行划分。
-'''
-
 def vae_data_split(IMAGE_DIR, meta_file, all_files_list, batch_size, HU_UpperBound, HU_LowerBound):
     meta = pd.read_csv(meta_file)
     def is_train(row,train,test):
@@ -40,7 +32,6 @@ def vae_data_split(IMAGE_DIR, meta_file, all_files_list, batch_size, HU_UpperBou
             return 'Train'
         else:
             return 'Test'
-    meta = pd.read_csv(r"D:/aMaster/github_code/VAE_lung_lesion_BMVC/Data/Meta/meta_mal_nonmal.csv")
     patient_id = list(np.unique(meta['patient_id']))
     train_patient , test_patient = train_test_split(patient_id,test_size = 0.3)
     meta['data_split']= meta['patient_id'].apply(lambda row : is_train(row,train_patient,test_patient))

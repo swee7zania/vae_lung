@@ -185,7 +185,7 @@ class Trainer:
                 break
         
         # save network parameters, losses and accuracy
-        torch.save({"stats": statsrec, "layer_sizes": layer_sizes, "state_dict": model.state_dict()}, os.path.join(self.results_path, "MLP.pt"))
+        torch.save({"state_dict": model.state_dict(), "params": self.params, "stats": statsrec}, os.path.join(self.results_path, "MLP.pt"))
         self.plot_results(self.results_path, epoch, f"MLP_train_curve_run{run_index}_fold{fold_index}.png")
         
         test_cm = self.confusion_matrix(test_outputs, test_labels, threshold)

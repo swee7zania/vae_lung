@@ -7,8 +7,7 @@ import math
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-meta_file = r"D:/aMaster/github_code/VAE_lung_lesion_BMVC/Data/Meta/meta_mal_nonmal.csv"
-results_path = "../VAE/results"
+results_path = "../results"
 run_file = os.path.join(results_path, "run.npy")
 
 def load_info(Run, results_path):

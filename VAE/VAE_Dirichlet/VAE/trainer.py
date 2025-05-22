@@ -38,9 +38,7 @@ class Trainer:
             test_losses.append(test_loss)
             ssim_score_list.append(ssim_score)
         
-        # 保存潜在向量
-        #self.save_latent_vectors(model, test_loader, self.Run)
-        torch.save({"state_dict": model.state_dict(), "train_losses": train_losses, "test_losses": test_losses}, self.results_path + '/VAE_params.pt')
+        torch.save({"state_dict": model.state_dict(), "train_losses": train_losses, "test_losses": test_losses, "params": self.params}, self.results_path + '/VAE_params.pt')
         return test_loss, test_ssim
 
     def train(self, model, epoch, epochs, optimiser, sample_shape, train_loader):
@@ -86,7 +84,6 @@ class Trainer:
             sample = torch.randn(sample_shape).to(self.device)
             recon_rand_sample = model.decode(sample)
             img_grid = make_grid(recon_rand_sample[:12], nrow=4, padding=12, pad_value=-1)
-            fig = plt.figure(figsize=(10,5))
             plt.imshow(img_grid[0].detach().cpu())
             plt.axis('off')
             plt.savefig(self.results_path + "/" + "visualise_synthetic" + str(epoch) + '.png')
@@ -132,12 +129,7 @@ class Trainer:
         return counter
         
     def plot_results(self, filename):
-        """
-        Method for plotting training and validation loss curves and saving them to the specified path.
-        """
         data_path = os.path.join(self.results_path, "VAE_params.pt")
-
-        # 检查数据文件是否存在
         if not os.path.exists(data_path):
             print(f"Data file {data_path} not found. Skipping plot generation.")
             return

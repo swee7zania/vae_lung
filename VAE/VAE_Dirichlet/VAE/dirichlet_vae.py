@@ -19,8 +19,7 @@ class ResampleDir(nn.Module):
         alpha_c = torch.log1p(alpha_c)
         return alpha_c
     
-    # 这两个是损失函数用的
-    # 计算 KL 散度 (Kullback-Leibler Divergence)，用于度量 alpha_target 和 alpha_c_pred 之间的分布差异
+    # These two are used for loss functions
     def dirichlet_kl_divergence(self, logits, eps=1e-10):
         alpha_c_pred = self.concentrations_from_logits(logits)
 
@@ -36,14 +35,16 @@ class ResampleDir(nn.Module):
         result = torch.squeeze(term1 + torch.sum(term2 + term3, keepdims=True, axis=-1))
         return result
     
-    # 直接计算 KL 散度，并返回 KL 损失值
+    # Calculate the KL divergence and return the KL loss value
     def prior_forward(self, logits): # analytical kld loss
         latent_vector = self.dirichlet_kl_divergence(logits)
         return latent_vector
 
     def sample(self, logits):
         alpha_pred = self.concentrations_from_logits(logits)
-        dir_sample = torch.squeeze(Dirichlet(alpha_pred).rsample())
+        # 这个会移除大小为 1 的维度，不适用单张图片
+        # dir_sample = torch.squeeze(Dirichlet(alpha_pred).rsample())
+        dir_sample = Dirichlet(alpha_pred).rsample()  # 保留原始维度
         return dir_sample
 
 

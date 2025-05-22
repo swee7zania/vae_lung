@@ -16,6 +16,7 @@ from pytorch_msssim import ssim
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 IMAGE_DIR = r"D:/aMaster/github_code/VAE_lung_lesion_BMVC/Data/Images"
 meta_file = r"D:/aMaster/github_code/VAE_lung_lesion_BMVC/Data/Meta/meta_mal_nonmal.csv"
+results_path = "../results"
 
 all_files_list = [f for f in os.listdir(IMAGE_DIR)]
 all_files_list.sort()
@@ -25,7 +26,7 @@ torch.manual_seed(int(time.time()))
 torch.backends.cudnn.deterministic = False
 torch.backends.cudnn.benchmark = False
 
-run_file_path = os.path.join("results", 'run.npy')
+run_file_path = os.path.join(results_path, 'run.npy')
 if not os.path.exists(run_file_path):
     print("run.npy 文件不存在，正在初始化...")
     np.save(run_file_path, [0])
@@ -45,7 +46,7 @@ train_loader, test_loader = vae_data_split(IMAGE_DIR, meta_file, all_files_list,
 model = DIR_VAE(params['base'], params['latent_size'], params['alpha_fill_value']).to(device)
 
 # Initialize Trainer
-trainer = Trainer(params, device, Run=Run, results_path="results", model=model)
+trainer = Trainer(params, device, Run=Run, results_path=results_path, model=model)
 
 # Set learning rate and epochs
 epochs = 20
@@ -63,7 +64,7 @@ print('Final Test Loss:', test_loss,
 
 vae_test_loss = test_loss
 
-# 保存潜在向量
+# Save potential vectors
 images = LoadImages(main_dir=IMAGE_DIR + '/', files_list=all_files_list, HU_Upper=params['HU_UpperBound'], HU_Lower=params['HU_LowerBound'])
 image_loader = DataLoader(images, params['batch_size'], shuffle=False)
 model.eval()
@@ -95,18 +96,18 @@ if not math.isnan(vae_test_loss):
     print('Mean Absolute Error', np.mean(L1_list))
     print('Mean SSIM', np.mean(SSIM_list))
 
-    np.save(os.path.join("results", f'latent_vectors_{Run}.npy'), mus)
+    np.save(os.path.join(results_path, f'latent_vectors_{Run}.npy'), mus)
         
     metrics_list = [ssim_score, test_loss, np.mean(MSE_list), np.mean(L1_list), params]   
     
-    # 保存 test_loss 和评估指标
+    # Save test_loss and evaluate metrics, used in MLP classifiers
     vae_info = {
         "vae_test_loss": vae_test_loss,
         "metrics_list": metrics_list,
         "latent_size": params["latent_size"],
         "base": params["base"]
     }
-    vae_info_path = os.path.join("results", f"vae_metrics_{Run}.npy")
+    vae_info_path = os.path.join(results_path, f"vae_metrics_{Run}.npy")
     np.save(vae_info_path, vae_info, allow_pickle=True)
     print(f"Saved VAE metrics to: {vae_info_path}")
 

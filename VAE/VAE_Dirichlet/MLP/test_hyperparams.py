@@ -16,7 +16,7 @@ def test_hyperparams(params, data, nepochs, num_folds, vae_test_loss, latent_siz
     mlp_runs = 0
     num_tried = 0
     
-    # 创建 latent_vectors2，用于 malignant vs benign
+    # Create latent vectors2 for malignant vs benign
     ambiguous = np.load(r"D:/aMaster/github_code/VAE_lung_lesion_BMVC/Data/latent vectors/ambiguous.npy")
     latent_vectors2 = []
     for i, vec in enumerate(latent_vectors):
