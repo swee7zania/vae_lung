@@ -1,7 +1,5 @@
-import os
 import random
 import numpy as np
-import pandas as pd
 import torch
 from torch.utils.data import Dataset, DataLoader
 
@@ -21,97 +19,84 @@ class LoadData(Dataset):
         y = self._y[index, :]
         return x, y
 
-
-def load_latent_vectors(run, results_path):
-    """
-    加载潜在向量文件 latent_vectors_{Run}.npy
-    """
-    latent_file = os.path.join(results_path, f"latent_vectors_{run}.npy")
-    if not os.path.exists(latent_file):
-        raise FileNotFoundError(f"{latent_file} not found. Ensure VAE model is trained.")
-    return np.load(latent_file, allow_pickle=True)
-
-
 def data_split(n, meta, latent_vectors, labels, batch_size):
-    """
-    数据集分割 - 交叉验证划分
-    """
-    def which_set(row, data_split):
+    def which_set(row,data_split):
         for i, dataset in enumerate(data_split):
             if row in dataset:
                 return i
-
     random.seed(42)
     patient_id = list(np.unique(meta['patient_id']))
     data_split, used = [], []
-
     for i in range(n):
         temp_set = []
-        while len(temp_set) < len(patient_id) // n:
+        while len(temp_set) < len(patient_id)//n:
             index = random.choice(patient_id)
             if index not in used:
                 used.append(index)
                 temp_set.append(index)
-
-        if i == n - 1:
+        if i == n-1:
             for pat_id in patient_id:
                 if pat_id not in used:
-                    temp_set.append(pat_id)
-
+                    temp_set.append(pat_id)    
         data_split.append(temp_set)
-
-    meta['data_split'] = meta['patient_id'].apply(lambda row: which_set(row, data_split))
-
+        
+    
+    meta['data_split'] = meta['patient_id'].apply(lambda row : which_set(row,data_split))
+    print(len(latent_vectors), len(labels))
+    split = list(meta["data_split"])
     cross_val_data, cross_val_labels = [], []
-
     for i in range(n):
         vecs, labs = [], []
-        for index, item in enumerate(meta['data_split']):
+        for index, item in enumerate(split):
             if item == i:
                 vecs.append(torch.tensor(latent_vectors[index]))
-                labs.append(torch.tensor(labels[index]))
-
+                labs.append(torch.tensor(labels[index]))            
         vecs = torch.stack(vecs)
-        labs = torch.unsqueeze(torch.stack(labs), 1)
+        labs = torch.unsqueeze(torch.stack(labs), 1)       
         cross_val_data.append(vecs)
         cross_val_labels.append(labs)
-
+    
     return cross_val_data, cross_val_labels
 
 
-def get_data_loaders(run, n, meta_file, results_path, batch_size):
-    """
-    获取数据加载器 (train_loader, val_loader)
-    """
-    latent_vectors = load_latent_vectors(run, results_path)
+def Cross_Validation(run, n, meta, latent_vectors, labels, batch_size):
+    def other_index(exclude, n):
+        index = []
+        for i in range(n):
+            if i not in exclude:
+                index.append(i)
+        return index
+    def find_subsets(run, n):
+        if run != n-1:
+            return other_index([n-2-run, n-1-run], n), n-2-run, n-1-run
+        if run == n-1:
+            return other_index([0, run], n), run, 0
 
-    # 加载标签
-    meta = pd.read_csv(meta_file)
-    labels = meta["label"].values
+    def concat_train_data(indices, datasets):
+        train_data = []
+        for idx in indices:
+            train_data.append(datasets[idx])
+        return train_data
+    
+    #loss_list, accuracy_list, results_list, auc_list = [], [], [], []
+    cross_val_data, cross_val_labels = data_split(n, meta, latent_vectors, labels, batch_size)    
+    
+    train_data, train_labels = [], []
+    cross_val_split = find_subsets(run, n)
+    for i in cross_val_split[0]:
+        train_data.append(cross_val_data[i])
+        train_labels.append(cross_val_labels[i])
+    train_data = torch.cat(train_data,dim=0)
+    train_labels = torch.cat(train_labels,dim=0)
 
-    # 交叉验证分割
-    cross_val_data, cross_val_labels = data_split(n, meta, latent_vectors, labels, batch_size)
+    train_dataset = LoadData(train_data, train_labels)
+    val_index = cross_val_split[1]
+    test_index = cross_val_split[2]
+    validation_dataset = LoadData(cross_val_data[val_index], cross_val_labels[val_index])
+    test_dataset = LoadData(cross_val_data[test_index], cross_val_labels[test_index])
 
-    data_loaders = []
-
-    for i in range(n):
-        # 获取训练数据 (除第 i 折外的数据)
-        train_data, train_labels = [], []
-        for j in range(n):
-            if j != i:
-                train_data.append(cross_val_data[j])
-                train_labels.append(cross_val_labels[j])
-
-        train_data = torch.cat(train_data, dim=0)
-        train_labels = torch.cat(train_labels, dim=0)
-
-        # 构建 DataLoader
-        train_dataset = LoadData(train_data, train_labels)
-        val_dataset = LoadData(cross_val_data[i], cross_val_labels[i])
-
-        train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
-        val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
-
-        data_loaders.append((train_loader, val_loader))
-
-    return data_loaders
+    train_loader = DataLoader(train_dataset, batch_size, shuffle=True)
+    validation_loader = DataLoader(validation_dataset, batch_size, shuffle=False)
+    test_loader = DataLoader(test_dataset, batch_size, shuffle=False) 
+    
+    return train_loader, validation_loader, test_loader

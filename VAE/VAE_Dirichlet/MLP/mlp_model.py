@@ -1,22 +1,60 @@
-import torch
 import torch.nn as nn
-import torch.nn.functional as F
 
 class MLP(nn.Module):
-    def __init__(self, input_dim, layer_sizes, dropout, depth):
+    def __init__(self, latent_size, base, layer_sizes, dropout, depth):
         super(MLP, self).__init__()
-        layers = []
-        for i in range(depth):
-            in_dim = input_dim if i == 0 else layer_sizes[i - 1]
-            out_dim = layer_sizes[i]
-            layers.append(nn.Linear(in_dim, out_dim))
-            layers.append(nn.GELU())
-            layers.append(nn.BatchNorm1d(out_dim))
-            layers.append(nn.Dropout(dropout))
 
-        layers.append(nn.Linear(layer_sizes[-1], 1))
-        layers.append(nn.Sigmoid())
-        self.model = nn.Sequential(*layers)
+        layers = []
+        size1, size2, size3 = layer_sizes
+
+        if depth == 4:
+            layers = [
+                nn.Linear(latent_size * base, size1),
+                nn.GELU(),
+                nn.BatchNorm1d(size1),
+                nn.Dropout(dropout),
+
+                nn.Linear(size1, size2),
+                nn.GELU(),
+                nn.BatchNorm1d(size2),
+                nn.Dropout(dropout),
+
+                nn.Linear(size2, size3),
+                nn.GELU(),
+                nn.BatchNorm1d(size3),
+                nn.Dropout(dropout),
+
+                nn.Linear(size3, 1),
+                nn.Sigmoid()
+            ]
+
+        elif depth == 5:
+            layers = [
+                nn.Linear(latent_size * base, size1),
+                nn.GELU(),
+                nn.BatchNorm1d(size1),
+                nn.Dropout(dropout),
+
+                nn.Linear(size1, size2),
+                nn.GELU(),
+                nn.BatchNorm1d(size2),
+                nn.Dropout(dropout),
+
+                nn.Linear(size2, size2),
+                nn.GELU(),
+                nn.BatchNorm1d(size2),
+                nn.Dropout(dropout),
+
+                nn.Linear(size2, size3),
+                nn.GELU(),
+                nn.BatchNorm1d(size3),
+                nn.Dropout(dropout),
+
+                nn.Linear(size3, 1),
+                nn.Sigmoid()
+            ]
+
+        self.network = nn.Sequential(*layers)
 
     def forward(self, x):
-        return self.model(x)
+        return self.network(x)

@@ -1045,6 +1045,10 @@ def train_model(nepochs, train_loader, valid_loader, test_loader, mlp_hyperparam
     
     return test_loss.item(), test_acc, results, auc
 
+
+'''
+    ------------------------------- 调优 ---------------------------------
+'''
 break_indicator = 0
 
 def test_hyperparams(parameter_space, data, vae_test_loss):

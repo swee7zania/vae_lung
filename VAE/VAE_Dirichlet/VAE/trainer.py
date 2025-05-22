@@ -8,12 +8,40 @@ from torchvision.utils import make_grid, save_image
 import math
 
 class Trainer:
-    def __init__(self, params, device, Run, results_path="results"):
+    def __init__(self, params, device, Run, results_path, model):
         self.params = params
         self.device = device
         self.Run = Run
         self.results_path = results_path
-        self.model = None
+        self.model = model
+    
+    def train_model(self, model, lr, epochs, sample_shape, train_loader, test_loader):
+        train_losses, test_losses, ssim_score_list = [], [], []
+        optimiser = optim.Adam(model.parameters(), lr=lr)
+        scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimiser, mode='min', factor=0.5, patience=20, 
+                                                               threshold=0.001, threshold_mode='abs')
+        counter = 0
+        for epoch in range(1, epochs + 1):
+            train_loss, ssim_score, kld = self.train(model, epoch, epochs, optimiser, sample_shape, train_loader)
+            test_loss, test_ssim = self.test(model, epoch, epochs, test_loader)
+            scheduler.step(train_loss)
+            counter = self.early_stopping(counter, train_loss, test_loss, min_delta=1)
+            if counter > 25:
+                print('Early stopping triggered at epoch:', epoch)
+                break
+
+            if math.isnan(train_loss):
+                print('Training stopped due to infinite loss')
+                break
+
+            train_losses.append(train_loss)
+            test_losses.append(test_loss)
+            ssim_score_list.append(ssim_score)
+        
+        # 保存潜在向量
+        #self.save_latent_vectors(model, test_loader, self.Run)
+        torch.save({"state_dict": model.state_dict(), "train_losses": train_losses, "test_losses": test_losses}, self.results_path + '/VAE_params.pt')
+        return test_loss, test_ssim
 
     def train(self, model, epoch, epochs, optimiser, sample_shape, train_loader):
         model.train()
@@ -73,7 +101,7 @@ class Trainer:
 
         return train_loss, ssim_mean, kld
         
-    def test(self, model, epoch, test_loader):
+    def test(self, model, epoch, epochs, test_loader):
         model.eval()
         test_loss, beta_test_loss = 0, 0
         ssim_list = []
@@ -102,46 +130,6 @@ class Trainer:
             if counter % 5 == 0:
                 print('Early Stopping Counter At:', counter)  
         return counter
-
-    def train_model(self, model, lr, epochs, sample_shape, train_loader, test_loader):
-        train_losses, test_losses, ssim_score_list = [], [], []
-        optimiser = optim.Adam(model.parameters(), lr=lr)
-        counter = 0
-        for epoch in range(1, epochs + 1):
-            train_loss, ssim_score, kld = self.train(model, epoch, epochs, optimiser, sample_shape, train_loader)
-            test_loss, test_ssim = self.test(model, epoch, test_loader)
-
-            counter = self.early_stopping(counter, train_loss, test_loss, min_delta=1)
-            if counter > 25:
-                print('Early stopping triggered at epoch:', epoch)
-                break
-
-            if math.isnan(train_loss):
-                print('Training stopped due to infinite loss')
-                break
-
-            train_losses.append(train_loss)
-            test_losses.append(test_loss)
-            ssim_score_list.append(ssim_score)
-        
-        # 保存潜在向量
-        self.save_latent_vectors(model, test_loader, self.Run)
-        torch.save({"state_dict": model.state_dict(), "train_losses": train_losses, "test_losses": test_losses}, self.results_path + '/VAE_params.pt')
-        return test_loss, test_ssim
-     
-    def save_latent_vectors(self, model, data_loader, Run):
-        model.eval()
-        latent_vectors = []
-        with torch.no_grad():
-            for batch_idx, data in enumerate(data_loader):
-                data = data.float().to(self.device)
-                _, alpha, _ = model(data)
-                for vec in alpha:
-                    latent_vectors.append(vec.cpu().numpy())
-
-        latent_vectors = np.array(latent_vectors)
-        np.save(os.path.join(self.results_path, f'latent_vectors_{Run}.npy'), latent_vectors)
-        print(f'Latent vectors saved as latent_vectors_{Run}.npy')
         
     def plot_results(self, filename):
         """
