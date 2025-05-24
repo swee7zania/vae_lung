@@ -126,7 +126,7 @@ class Trainer:
         
         statsrec = np.zeros((4,nepochs))
         
-        loss_fn = nn.BCELoss()
+        loss_fn = nn.BCELoss()  # binary cross entropy
         optimiser = optimizer = optim.Adam(model.parameters(), lr)
         scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimiser, mode='min', factor=0.5, patience=20, 
                                                                    threshold=0.001, threshold_mode='abs')
@@ -166,6 +166,15 @@ class Trainer:
             # collect together statistics for this epoch
             ltrn = running_loss/n
             atrn = correct/total 
+            
+            # Correc way to this part
+            # valid_results = self.stats(test_loader, model, threshold)
+            # valid_loss, valid_acc = valid_results[0], valid_results[1]
+            # valid_outputs, valid_labels = valid_results[2], valid_results[3]
+            # if epoch % 75 == 0 or epoch == nepochs - 1 or counter == 25:
+            #     print('valid loss:', valid_loss.item(),'test accuracy:', valid_acc*100, '%')  
+            # scheduler.step(valid_loss)
+            
             results = self.stats(valid_loader, model, threshold)
             lval, aval = results[0], results[1]
             #val_outputs, val_labels = results[2], results[3]
@@ -178,7 +187,11 @@ class Trainer:
             test_outputs, test_labels = test_results[2], test_results[3]
             if epoch % 75 == 0 or epoch == nepochs - 1 or counter == 25:
                 print('test loss:', test_loss.item(),'test accuracy:', test_acc*100, '%')  
-            scheduler.step(test_loss)
+            #incorrect
+            scheduler.step(test_loss)  
+            # correct
+           # scheduler.step(lval)
+            
             counter = self.early_stopping(counter, ltrn, lval, min_delta=0.25)
             if counter > 25:
                 print("At Epoch:", epoch)
