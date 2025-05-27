@@ -6,9 +6,9 @@
    - Delete irrelevant columns (such as `is_clean`);
    - Filter out nodule-related samples by judging whether the characters in the original_image column (positions 6–7 are "NI").
 
-   | Rows  | Patient |
-   | ----- | ------- |
-   | 13607 | 862     |
+   | Slices | Patient |
+   | ------ | ------- |
+   | 13607  | 862     |
 
 2. **Data Filtering:**
 
@@ -25,9 +25,9 @@
    |               | True          | 5074               |
    |               | False         | 3226               |
 
-   | Rows | Patient |
-   | ---- | ------- |
-   | 8300 | 669     |
+   | Slices | Patient |
+   | ------ | ------- |
+   | 8300   | 669     |
 
 3. **Splitting the dataset:**
 
@@ -39,7 +39,7 @@
    |              | Train | Test | Validation | Total |
    | ------------ | ----- | ---- | ---------- | ----- |
    | **Patients** | 465   | 134  | 70         | 669   |
-   | **Rows**     | 5738  | 1649 | 913        | 8300  |
+   | **Slices**   | 5738  | 1649 | 913        | 8300  |
 
 4. **Filter the data:**
 
@@ -53,4 +53,4 @@
    |              | **cancer** | **noncancer** | **Total** |
    | ------------ | ---------- | ------------- | --------- |
    | **Patients** | 383        | 286           | 669       |
-   | **Rows**     | 5074       | 3216          | 8290      |
+   | **Slices**   | 5074       | 3216          | 8290      |

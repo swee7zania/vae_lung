@@ -82,7 +82,7 @@ def classify_patient(patient_id, meta, vae_path, mlp_path, IMAGE_DIR, method='vo
         
     return final_pred, predictions, probabilities
 
-# === Step 4: Predict ===
+# === Step 4: Predict ===a
 if __name__ == "__main__":
     patient_id = 21
     final_result, slice_predictions, slice_probs = classify_patient(
