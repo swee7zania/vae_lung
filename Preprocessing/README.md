@@ -32,15 +32,14 @@
 3. **Splitting the dataset:**
 
    - Split the dataset based on patient ID;
-   - Divide patients into 80% training + 20% testing;
-   - Take 13% from the training set for validation;
-   - Use the is_train function to assign labels (Train, Validation, Test) to each data sample.
-
-   |              | Train | Test | Validation | Total |
-   | ------------ | ----- | ---- | ---------- | ----- |
-   | **Patients** | 465   | 134  | 70         | 669   |
-   | **Slices**   | 5738  | 1649 | 913        | 8300  |
-
+   - Divide patients into 85% training + 15% validation;
+   - Use the is_train function to assign labels (Train, Validation) to each data sample.
+   
+   |              | Train | Validation | Total |
+   | ------------ | ----- | ---------- | ----- |
+   | **Patients** | 568   | 101        | 669   |
+   | **Slices**   | 7075  | 1215       | 8290  |
+   
 4. **Filter the data:**
 
    - Only keep the records of image files in the directory.
