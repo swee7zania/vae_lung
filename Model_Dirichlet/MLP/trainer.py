@@ -140,12 +140,19 @@ class Trainer:
         if tn == 0 and fp == 0:
             fp = 1
         
-        precision = tp/(tp+fp)
-        recall = tp/(tp+fn)
-        specificity = tn/(tn+fp)
-        f1 = 2*((precision*recall)/(precision+recall))
-        
-        results = [precision, recall, specificity, f1]
+        # 正类指标
+        precision_pos = tp / (tp + fp)
+        recall_pos = tp / (tp + fn)
+    
+        # 负类指标
+        precision_neg = tn / (tn + fn)
+        recall_neg = tn / (tn + fp)   # specificity = recall_neg
+    
+        # F1 scores
+        f1_pos = 2 * precision_pos * recall_pos / (precision_pos + recall_pos) if (precision_pos + recall_pos) != 0 else 0
+        f1_neg = 2 * precision_neg * recall_neg / (precision_neg + recall_neg) if (precision_neg + recall_neg) != 0 else 0
+    
+        results = [precision_pos, precision_neg, recall_pos, recall_neg, f1_pos, f1_neg]
         
         return results
     

@@ -52,23 +52,27 @@ def train_mlp(latent_train, labels_train, latent_val, labels_val, params, epochs
     
     
     # ──────────────────────── Evaluation ────────────────────────
-    precision, recall, specificity, f1 = results
+    precision_pos, precision_neg, recall_pos, recall_neg, f1_pos, f1_neg = results
         
     metrics = {
-        "precision": precision,
-        "recall": recall,
-        "specificity": specificity,
-        "f1": f1,
+        "precision_pos": precision_pos,
+        "precision_neg": precision_neg,
+        "recall_pos": recall_pos,
+        "recall_neg": recall_neg,
+        "f1_pos": f1_pos,
+        "f1_neg": f1_neg,
         "auc": auc,
         "params": params
     }
     
     print(f"\n───── MLP Fold {fold} Evaluation ─────")
-    print(f"AUC         : {auc:.4f}")           # 显示 ROC 曲线下的面积
-    print(f"Precision   : {precision:.4f}")     # 精确率，表示被预测为正的样本中有多少是真正的正类
-    print(f"Recall      : {recall:.4f}")        # 召回率，表示所有真正的正类中被模型识别出来的比例
-    print(f"Specificity : {specificity:.4f}")   # 特异度，表示所有负样本中被正确识别为负类的比例
-    print(f"F1 score    : {f1:.4f}")            # F1 分数是 precision 和 recall 的调和平均
+    print(f"AUC             : {auc:.4f}")
+    print(f"Prec Positive   : {precision_pos:.4f}")
+    print(f"Prec Negative   : {precision_neg:.4f}")
+    print(f"Recall Positive : {recall_pos:.4f}")
+    print(f"Recall Negative : {recall_neg:.4f}")
+    print(f"F1 Positive     : {f1_pos:.4f}")
+    print(f"F1 Negative     : {f1_neg:.4f}") 
     print("──────────────────────────────────────")
 
     np.save(os.path.join(results_path, f"mlp_metrics_fold{fold}.npy"), metrics, allow_pickle=True)
