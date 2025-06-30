@@ -29,7 +29,7 @@ This project implements a complete deep learning pipeline for **lung lesion imag
 ├── LIDC_DICOM_to_Numpy.ipynb    # Processing of CT images and mask images
 ├── Train_Test_Split.ipynb       # Data partitioning and metadata processing
 
-/Model_Dirichlet/
+/Model/
 ├── /VAE/                # Code for training the VAE model
 ├── /MLP/                # Code for training the MLP classifier
 ├── /utils/              # As the execution entry for the project
