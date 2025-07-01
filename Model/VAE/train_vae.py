@@ -7,7 +7,7 @@ import torch.nn as nn
 from torchvision import transforms
 from torch.utils.data import Dataset, DataLoader
 from vae_model import VAE
-from trainer import Trainer
+from trainer_vae import Trainer
 
 # 用于加载 .npy 图像
 class NpyDataset(Dataset):
@@ -35,7 +35,7 @@ class NpyDataset(Dataset):
 
 
 
-# 抽取 Dirichlet latent 向量
+# 抽取 latent 向量
 def extract_latents(model, dataloader, device):
     model.eval()
     latents = []
@@ -86,12 +86,11 @@ def train_vae(train_df, val_df, params, epochs, fold, results_path, device):
     
     
     # ──────────────────────── Evaluation ────────────────────────
-    # 评估 SSIM、MSE、L1 指标
+    # 评估 SSIM、MSE、Loss 指标
     model.eval()
     MSE = nn.MSELoss(reduction='mean')
-    L1 = nn.L1Loss(reduction='mean')
     
-    mse_list, l1_list, mus = [], [], []
+    mse_list, mus = [], []
 
     with torch.no_grad():
         for batch in val_loader:
@@ -100,11 +99,9 @@ def train_vae(train_df, val_df, params, epochs, fold, results_path, device):
             mus.extend(alpha.cpu().numpy())
 
             mse_list.append(MSE(batch, recon).item())
-            l1_list.append(L1(batch, recon).item())
     
     metrics = {
         "mse": float(np.mean(mse_list)),
-        "l1": float(np.mean(l1_list)),
         "ssim": float(np.mean(ssim_score_list)),
         "train_loss": float(np.mean(train_losses)),
         "val_loss": float(np.mean(val_losses)),
@@ -113,15 +110,11 @@ def train_vae(train_df, val_df, params, epochs, fold, results_path, device):
       
     print(f"\n───── VAE Fold {fold} Evaluation ─────")
     print(f"MSE Mean   : {np.mean(mse_list):.4f}")
-    print(f"L1 Mean    : {np.mean(l1_list):.4f}")
     print(f"Train Loss  : {np.mean(train_losses):.4f}")
     print(f"Val Loss  : {np.mean(val_losses):.4f}")
     print(f"SSIM Mean  : {np.mean(ssim_score_list):.4f}")
     print("──────────────────────────────────────")
     
-    # np.save(os.path.join(results_path, f"latent_train_fold{fold}.npy"), latent_train)
-    # np.save(os.path.join(results_path, f"latent_val_fold{fold}.npy"), latent_val)
-    # np.save(os.path.join(results_path, f"latent_alpha_fold{fold}.npy"), mus)
     np.save(os.path.join(results_path, f"vae_metrics_fold{fold}.npy"), metrics, allow_pickle=True)
     
     return latent_train, latent_val

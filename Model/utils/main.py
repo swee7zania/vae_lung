@@ -105,7 +105,7 @@ if __name__ == "__main__":
     print(f"Using Hyperparameters:{params}\n")
     
     k_folds = 5
-    epochs = 5
+    epochs = 2
     
     # 初始化训练器
     os.makedirs(results_path, exist_ok=True)

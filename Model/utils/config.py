@@ -6,11 +6,11 @@ PARAMETER_SPACE = {
     "HU_LowerBound": [-1000],
     "base": [64],
     "latent_size": [4],
+    "batch_size": [128],
     "annealing": [0],
     "alpha": [0.8],
     "beta": [5],
     "lr": [0.0001],
-    "batch_size": [128],
 
     # MLP Hyperparameters
     "threshold": [0.6, 0.55, 0.5, 0.45, 0.4],
@@ -39,4 +39,8 @@ def get_best_hyperparams():
         "alpha": 0.8,
         "beta": 5,
         "lr": 0.0001,
+        "layer_sizes": [2048, 512, 128],
+        "dropout": 0.2,
+        "Depth": 4,
+        # "threshold":
     }

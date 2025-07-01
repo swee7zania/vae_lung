@@ -2,7 +2,7 @@ import os
 import torch
 import numpy as np
 from torch.utils.data import Dataset, DataLoader
-from MLP.trainer import Trainer
+from MLP.trainer_mlp import Trainer
 from MLP.mlp_model import MLP
 
 class LatentDataset(Dataset):
