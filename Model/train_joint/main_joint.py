@@ -6,7 +6,7 @@ from torchvision import transforms
 from torch.utils.data import Dataset, DataLoader
 
 from data_split import load_meta_and_images
-from config import get_random_hyperparams, get_best_hyperparams
+from config import get_best_hyperparams
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from VAE.vae_model import VAE
@@ -68,26 +68,24 @@ def run_kfold_joint_training(meta_file, image_dir, k_folds, params, epochs, resu
         trainer = JointTrainer(params, device, results_path, vae, mlp)
 
         # === Step 4: Train ===
-        train_losses, val_losses, ssim_scores = trainer.train_model(epochs, train_loader, val_loader, fold)
+        result = trainer.train_model(epochs, train_loader, val_loader, fold)
 
-        # === Step 5: Save losses & plot ===
-        np.save(os.path.join(results_path, f"joint_train_loss_fold{fold}.npy"), train_losses)
-        np.save(os.path.join(results_path, f"joint_val_loss_fold{fold}.npy"), val_losses)
-        np.save(os.path.join(results_path, f"joint_ssim_fold{fold}.npy"), ssim_scores)
-
-        trainer.plot_results(train_losses, val_losses, f"joint_loss_curve_fold{fold}.png")
+        # === Step 5: Save losses plot ===
+        trainer.plot_results(result['train_losses'], result['val_losses'], f"joint_loss_curve_fold{fold}.png")
         
-        # === Step 6: Save final model checkpoint ===
+        # === Step 6: Save best model checkpoint ===
         torch.save({
-            'vae_state_dict': vae.state_dict(),
-            'mlp_state_dict': mlp.state_dict(),
+            'vae_state_dict': result['best_model_state']['vae'],
+            'mlp_state_dict': result['best_model_state']['mlp'],
             'params': params,
-            'train_losses': train_losses,
-            'val_losses': val_losses,
-            'ssim_scores': ssim_scores
+            'train_losses': result['train_losses'],
+            'val_losses': result['val_losses'],
+            'ssim_scores': result['ssim_scores'],
+            'best_val_loss': result['best_val_loss'],
+            'best_epoch': result['best_epoch'],
+            'metrics': result['metrics']
         }, os.path.join(results_path, f"joint_model_fold{fold}.pth"))
         
-
 
 if __name__ == "__main__":
     meta_file = r"D:/aMaster/github_code/VAE_lung_lesion_BMVC/Data/Meta/meta_mal_ben.csv"
@@ -96,11 +94,11 @@ if __name__ == "__main__":
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-    params = get_random_hyperparams()
-    print(f"Using Hyperparameters:{params}\n")
+    params = get_best_hyperparams()
+    print(f"Using Hyperparameters:{params}")
 
-    k_folds = 3
-    epochs = 3
+    k_folds = 5
+    epochs = 50
 
     run_kfold_joint_training(meta_file, image_dir, k_folds, params, epochs, results_path, device)
 

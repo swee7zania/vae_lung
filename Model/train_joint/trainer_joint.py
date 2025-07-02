@@ -35,7 +35,14 @@ class JointTrainer:
         # MLP loss 权重：更重视分类准确率 → 用大；更重视重建质量，降低分类影响 → 用小 alpha
         mlp_loss_weight = 1.2      
         recon_loss_weight = 0.8   # recon loss 混合权重
-
+        
+        # ===== Early Stopping 设置 =====
+        best_val_loss = float('inf')
+        patience = 1000  # 如果 val_loss 连续 10 次没有提升，就 early stop
+        counter = 0
+        best_model_state = None
+        best_epoch = 0
+    
         for epoch in range(1, epochs + 1):
             print(f"[JointTrainer] Epoch {epoch}/{epochs}")
             train_loss, ssim_score = self.train_one_epoch(train_loader, beta, mlp_loss_weight, recon_loss_weight, epoch)
@@ -44,6 +51,28 @@ class JointTrainer:
             train_losses.append(train_loss)
             val_losses.append(val_loss)
             ssim_score_list.append(ssim_score)
+            
+            # ===== Early Stopping 检查 =====
+            if val_loss < best_val_loss:
+                best_val_loss = val_loss
+                best_epoch = epoch
+                counter = 0
+                # 保存当前最优模型
+                best_model_state = {
+                    'vae': self.vae.state_dict(),
+                    'mlp': self.mlp.state_dict()
+                }
+            else:
+                counter += 1
+                # print(f"[EarlyStopping] No improvement for {counter}/{patience} epochs.")
+                if counter >= patience:
+                    # print(f"[EarlyStopping] Stopping early at epoch {epoch}.")
+                    break
+    
+        # 恢复最优模型
+        if best_model_state is not None:
+            self.vae.load_state_dict(best_model_state['vae'])
+            self.mlp.load_state_dict(best_model_state['mlp'])
 
         # 最后一轮后评估分类性能
         metrics_dict, cm, labels, preds = self.evaluate_classification(val_loader)
@@ -57,7 +86,16 @@ class JointTrainer:
 
         np.save(os.path.join(self.results_path, f"joint_metrics_fold{fold}.npy"), metrics_dict, allow_pickle=True)
 
-        return train_losses, val_losses, ssim_score_list
+        # 返回所有训练信息
+        return {
+            "train_losses": train_losses,
+            "val_losses": val_losses,
+            "ssim_scores": ssim_score_list,
+            "best_model_state": best_model_state,
+            "best_val_loss": best_val_loss,
+            "best_epoch": best_epoch,
+            "metrics": metrics_dict
+        }
     
     def train_one_epoch(self, train_loader, beta, mlp_loss_weight, recon_loss_weight, epoch):
         self.vae.train()
@@ -141,45 +179,57 @@ class JointTrainer:
     def evaluate_classification(self, val_loader):
         self.vae.eval()
         self.mlp.eval()
-
+    
         all_preds = []
         all_labels = []
-
+    
         with torch.no_grad():
             for x, labels in val_loader:
                 x = x.float().to(self.device)
                 labels = labels.float().to(self.device)
-
+    
                 _, mu, _ = self.vae(x)
                 z = mu.view(mu.size(0), -1)
                 preds = self.mlp(z)
-
+    
                 all_preds.append(preds.cpu().numpy())
                 all_labels.append(labels.cpu().numpy())
-
+    
         preds = np.concatenate(all_preds).squeeze()
         labels = np.concatenate(all_labels).squeeze()
-        
-        threshold = self.params["threshold"]
-        preds_binary = (preds >= threshold).astype(int)
-
+    
+        # ========= 寻找 F1 最优的 threshold =========
+        thresholds = np.linspace(0.4, 0.9, 10)
+        best_f1, best_threshold = 0, 0.5
+        for t in thresholds:
+            pred_bin = (preds >= t).astype(int)
+            f1 = metrics.f1_score(labels, pred_bin)
+            if f1 > best_f1:
+                best_f1 = f1
+                best_threshold = t
+    
+        print(f"Best threshold: {best_threshold:.2f} (F1 = {best_f1:.4f})")
+    
+        # ========= 用 best_threshold 重新计算 =========
+        preds_binary = (preds >= best_threshold).astype(int)
         tp = np.sum((preds_binary == 1) & (labels == 1))
         fp = np.sum((preds_binary == 1) & (labels == 0))
         tn = np.sum((preds_binary == 0) & (labels == 0))
         fn = np.sum((preds_binary == 0) & (labels == 1))
-
+    
         precision_pos = tp / (tp + fp + 1e-8)
         precision_neg = tn / (tn + fn + 1e-8)
         recall_pos = tp / (tp + fn + 1e-8)
         recall_neg = tn / (tn + fp + 1e-8)
-
+    
         f1_pos = 2 * precision_pos * recall_pos / (precision_pos + recall_pos + 1e-8)
         f1_neg = 2 * precision_neg * recall_neg / (precision_neg + recall_neg + 1e-8)
         auc = metrics.roc_auc_score(labels, preds)
-
+    
         cm = np.array([[tn, fp], [fn, tp]])
-
+    
         metrics_dict = {
+            "Threshold": best_threshold,
             "Precision": precision_pos,
             "prec_neg": precision_neg,
             "Recall": recall_pos,
@@ -188,8 +238,9 @@ class JointTrainer:
             "f1_neg": f1_neg,
             "AUC": auc
         }
-
+    
         return metrics_dict, cm, labels, preds
+
     
     def plot_roc_curve(self, labels, preds, filename):
         fpr, tpr, thresholds = metrics.roc_curve(labels, preds)

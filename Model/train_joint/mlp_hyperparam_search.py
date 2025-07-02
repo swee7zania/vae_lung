@@ -5,14 +5,13 @@ import random
 import itertools
 import pandas as pd
 from tqdm import tqdm
+from torch.utils.data import DataLoader
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from VAE.vae_model import VAE
 from MLP.mlp_model import MLP
 from trainer_joint import JointTrainer
 from main_joint import NpyDataset
-
-from torch.utils.data import DataLoader
 
 def search_space():
     return {

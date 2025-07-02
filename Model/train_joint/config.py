@@ -42,5 +42,5 @@ def get_best_hyperparams():
         "layer_sizes": [2048, 512, 128],
         "dropout": 0.2,
         "Depth": 4,
-        # "threshold":
+        # "threshold": 0.5
     }
